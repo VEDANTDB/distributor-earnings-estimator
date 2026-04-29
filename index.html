@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distributor Earnings Calculator — MF / PMS / AIF</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-info: #e6f1fb;
+    --text-primary: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-info: #185fa5;
+    --border: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --blue: #185FA5;
+    --amber: #BA7517;
+    --green: #3B6D11;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg-secondary: #252523;
+      --bg-info: #0c2c4a;
+      --text-primary: #f0ede8;
+      --text-secondary: #b4b2a9;
+      --text-tertiary: #888780;
+      --text-info: #85b7eb;
+      --border: rgba(255,255,255,0.1);
+      --border-strong: rgba(255,255,255,0.2);
+      --blue: #85b7eb;
+      --amber: #fac775;
+      --green: #c0dd97;
+    }
+  }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .header-title { font-size: 20px; font-weight: 500; }
+  .header-sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .header-aum { text-align: right; }
+  .header-aum-label { font-size: 11px; color: var(--text-tertiary); }
+  .header-aum-val { font-size: 26px; font-weight: 500; margin-top: 2px; }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.75rem;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+  }
+
+  .slider-row span { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--border-strong);
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1rem;
+  }
+
+  .metric-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .metric-val {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .metric-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .prod-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .prod-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+  }
+
+  .prod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .prod-name { font-size: 15px; font-weight: 500; }
+
+  .dd-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+
+  .dd-low { background: #EAF3DE; color: #3B6D11; }
+  .dd-med { background: #FAEEDA; color: #854F0B; }
+  .dd-high { background: #FCEBEB; color: #A32D2D; }
+
+  @media (prefers-color-scheme: dark) {
+    .dd-low { background: #173404; color: #c0dd97; }
+    .dd-med { background: #412402; color: #fac775; }
+    .dd-high { background: #501313; color: #f09595; }
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .dot-low { background: #639922; }
+  .dot-med { background: #BA7517; }
+  .dot-high { background: #E24B4A; }
+
+  .prod-income { margin-bottom: 12px; }
+  .prod-income-label { font-size: 10px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .prod-income-val { font-size: 22px; font-weight: 500; }
+  .prod-income-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+
+  .fee-table { border-top: 0.5px solid var(--border); padding-top: 10px; }
+  .section-label { font-size: 10px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+  .fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 12.5px;
+  }
+  .fee-row:last-child { border-bottom: none; }
+  .fee-name { color: var(--text-secondary); }
+  .fee-range { font-weight: 500; }
+
+  .bar-section {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bar-tag { font-size: 13px; font-weight: 500; min-width: 32px; }
+  .bar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    height: 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.35s ease; }
+  .bar-lbl { font-size: 12px; color: var(--text-secondary); min-width: 70px; text-align: right; }
+
+  .dd-section {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .dd-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .dd-row:last-child { border-bottom: none; }
+  .dd-badge-lg { min-width: 90px; }
+  .dd-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .dd-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  .caveats {
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .caveat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+  }
+
+  .caveat-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .caveat-body { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div>
+      <div class="header-title">Distributor Earnings Calculator</div>
+      <div class="header-sub">India — Mutual Funds / PMS / AIF</div>
+    </div>
+    <div class="header-aum">
+      <div class="header-aum-label">AUM per product</div>
+      <div class="header-aum-val" id="aum-display">₹100 Cr</div>
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <span>₹10 Cr</span>
+    <input type="range" min="10" max="500" step="10" value="100" id="aum-slider" oninput="updateAll(this.value)">
+    <span>₹500 Cr</span>
+  </div>
+
+  <div class="summary-grid">
+    <div class="metric-card">
+      <div class="metric-label">Total annual income</div>
+      <div class="metric-val" id="total-annual">₹1.85 Cr</div>
+      <div class="metric-sub">across all 3 products</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total monthly income</div>
+      <div class="metric-val" id="total-monthly">₹15.4 L</div>
+      <div class="metric-sub">average run rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Combined AUM</div>
+      <div class="metric-val" id="combined-aum">₹300 Cr</div>
+      <div class="metric-sub">total assets managed</div>
+    </div>
+  </div>
+
+  <div class="prod-grid">
+    <div class="prod-card">
+      <div class="prod-header">
+        <span class="prod-name">Mutual Funds</span>
+        <span class="dd-badge dd-low"><span class="dot dot-low"></span>Low DD</span>
+      </div>
+      <div class="prod-income">
+        <div class="prod-income-label">Annual trail income</div>
+        <div class="prod-income-val" id="mf-annual">₹75 L</div>
+        <div class="prod-income-sub" id="mf-monthly">₹6.25 L / month</div>
+      </div>
+      <div class="fee-table">
+        <div class="section-label">Fee structure</div>
+        <div class="fee-row"><span class="fee-name">Equity trail</span><span class="fee-range">0.75–1.00%</span></div>
+        <div class="fee-row"><span class="fee-name">Debt trail</span><span class="fee-range">0.25–0.50%</span></div>
+        <div class="fee-row"><span class="fee-name">Upfront</span><span class="fee-range">Banned (SEBI)</span></div>
+        <div class="fee-row"><span class="fee-name">Blended avg used</span><span class="fee-range">0.75%</span></div>
+      </div>
+    </div>
+
+    <div class="prod-card">
+      <div class="prod-header">
+        <span class="prod-name">PMS</span>
+        <span class="dd-badge dd-med"><span class="dot dot-med"></span>Medium DD</span>
+      </div>
+      <div class="prod-income">
+        <div class="prod-income-label">Annual referral income</div>
+        <div class="prod-income-val" id="pms-annual">₹60–80 L</div>
+        <div class="prod-income-sub" id="pms-monthly">₹5–6.7 L / month</div>
+      </div>
+      <div class="fee-table">
+        <div class="section-label">Fee structure</div>
+        <div class="fee-row"><span class="fee-name">Mgmt fee referral</span><span class="fee-range">0.50–0.75%</span></div>
+        <div class="fee-row"><span class="fee-name">Performance share</span><span class="fee-range">Negotiable</span></div>
+        <div class="fee-row"><span class="fee-name">Typical perf fee</span><span class="fee-range">10–20% above hurdle</span></div>
+        <div class="fee-row"><span class="fee-name">Blended avg used</span><span class="fee-range">0.60–0.80%</span></div>
+      </div>
+    </div>
+
+    <div class="prod-card">
+      <div class="prod-header">
+        <span class="prod-name">AIF</span>
+        <span class="dd-badge dd-high"><span class="dot dot-high"></span>High DD</span>
+      </div>
+      <div class="prod-income">
+        <div class="prod-income-label">Annual referral income</div>
+        <div class="prod-income-val" id="aif-annual">₹50–75 L</div>
+        <div class="prod-income-sub" id="aif-monthly">₹4.2–6.25 L / month</div>
+      </div>
+      <div class="fee-table">
+        <div class="section-label">Fee structure</div>
+        <div class="fee-row"><span class="fee-name">Mgmt fee referral</span><span class="fee-range">0.50–0.75%</span></div>
+        <div class="fee-row"><span class="fee-name">Cat I / II (PE, debt)</span><span class="fee-range">~0.50%</span></div>
+        <div class="fee-row"><span class="fee-name">Cat III (hedge)</span><span class="fee-range">~0.75%</span></div>
+        <div class="fee-row"><span class="fee-name">Blended avg used</span><span class="fee-range">0.50–0.75%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar-section">
+    <div class="section-label" style="margin-bottom:14px;">Annual income comparison</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="bar-row">
+        <span class="bar-tag">MF</span>
+        <div class="bar-track"><div class="bar-fill" id="bar-mf" style="background:#185FA5;width:75%;"></div></div>
+        <span class="bar-lbl" id="bar-mf-label">₹75 L</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-tag">PMS</span>
+        <div class="bar-track"><div class="bar-fill" id="bar-pms" style="background:#BA7517;width:70%;"></div></div>
+        <span class="bar-lbl" id="bar-pms-label">₹70 L</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-tag">AIF</span>
+        <div class="bar-track"><div class="bar-fill" id="bar-aif" style="background:#639922;width:62%;"></div></div>
+        <span class="bar-lbl" id="bar-aif-label">₹62.5 L</span>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--text-tertiary);margin-top:12px;">PMS/AIF figures show midpoint of range. MF excludes performance bonus from AMC.</p>
+  </div>
+
+  <div class="dd-section">
+    <div class="section-label" style="margin-bottom:10px;">Due diligence requirements</div>
+    <div class="dd-row">
+      <span class="dd-badge dd-low dd-badge-lg"><span class="dot dot-low"></span>MF — Low</span>
+      <div>
+        <div class="dd-title">Daily NAV, SEBI-regulated, fully transparent</div>
+        <div class="dd-desc">Track fund vs benchmark. Monitor fund manager changes. Check expense ratio (regular vs direct). No lock-in for most funds. Client suitability = simple KYC + risk profile.</div>
+      </div>
+    </div>
+    <div class="dd-row">
+      <span class="dd-badge dd-med dd-badge-lg"><span class="dot dot-med"></span>PMS — Medium</span>
+      <div>
+        <div class="dd-title">Strategy monitoring, concentration risk, manager track record</div>
+        <div class="dd-desc">Review monthly factsheets + quarterly reports. Verify portfolio overlap. Watch for style drift. Understand performance fee triggers. Min ticket ₹50L (HNI-only clients). Separate client account — reduces counterparty risk.</div>
+      </div>
+    </div>
+    <div class="dd-row">
+      <span class="dd-badge dd-high dd-badge-lg"><span class="dot dot-high"></span>AIF — High</span>
+      <div>
+        <div class="dd-title">Illiquid structures, complex legal docs, drawdown schedules</div>
+        <div class="dd-desc">Read PPM carefully. Cat I/II: closed-ended, capital call risk, 3–7 yr lock-in. Cat III: leverage, complex derivatives, mark-to-model valuation. Verify fund manager SEBI registration. Min ticket ₹1 Cr. Know exit/liquidity windows. Higher fiduciary duty on distributor.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="caveats">
+    <div class="section-label" style="margin-bottom:12px;">Key caveats</div>
+    <div class="caveat-grid">
+      <div>
+        <div class="caveat-title">MF trail is recurring and passive</div>
+        <div class="caveat-body">Once invested, trail accrues monthly regardless of activity. SEBI's TER caps limit upside but also protect consistency.</div>
+      </div>
+      <div>
+        <div class="caveat-title">PMS income = fixed + variable</div>
+        <div class="caveat-body">Fixed referral is reliable. Performance fee share is negotiated deal-by-deal and may not exist at all managers.</div>
+      </div>
+      <div>
+        <div class="caveat-title">AIF: illiquidity means lumpy income</div>
+        <div class="caveat-body">Capital is called in tranches. Income accrues on deployed capital, not total commitment. Cat III income is more linear.</div>
+      </div>
+      <div>
+        <div class="caveat-title">Regulatory note</div>
+        <div class="caveat-body">Distributors must comply with AMFI (MF) and SEBI (PMS/AIF) registration. Trail fees must be disclosed to clients under SEBI norms.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    For indicative purposes only. Actual commissions vary by AMC/fund manager agreement. Not investment or legal advice.
+  </div>
+
+</div>
+<script>
+function fmt(cr) {
+  const lakhs = cr * 100;
+  if (lakhs >= 100) return '₹' + (lakhs / 100).toFixed(2) + ' Cr';
+  return '₹' + lakhs.toFixed(1) + ' L';
+}
+
+function updateAll(aum) {
+  aum = parseInt(aum);
+  document.getElementById('aum-display').textContent = '₹' + aum + ' Cr';
+  document.getElementById('combined-aum').textContent = '₹' + (aum * 3) + ' Cr';
+
+  const mfAnn = aum * 0.0075;
+  const pmsL = aum * 0.006, pmsH = aum * 0.008, pmsMid = (pmsL + pmsH) / 2;
+  const aifL = aum * 0.005, aifH = aum * 0.0075, aifMid = (aifL + aifH) / 2;
+  const total = mfAnn + pmsMid + aifMid;
+
+  document.getElementById('mf-annual').textContent = fmt(mfAnn);
+  document.getElementById('mf-monthly').textContent = fmt(mfAnn / 12) + ' / month';
+  document.getElementById('pms-annual').textContent = fmt(pmsL) + ' – ' + fmt(pmsH);
+  document.getElementById('pms-monthly').textContent = fmt(pmsL / 12) + ' – ' + fmt(pmsH / 12) + ' / month';
+  document.getElementById('aif-annual').textContent = fmt(aifL) + ' – ' + fmt(aifH);
+  document.getElementById('aif-monthly').textContent = fmt(aifL / 12) + ' – ' + fmt(aifH / 12) + ' / month';
+  document.getElementById('total-annual').textContent = fmt(total);
+  document.getElementById('total-monthly').textContent = fmt(total / 12);
+
+  const maxBar = Math.max(mfAnn, pmsH, aifH);
+  document.getElementById('bar-mf').style.width = Math.round(mfAnn / maxBar * 100) + '%';
+  document.getElementById('bar-pms').style.width = Math.round(pmsMid / maxBar * 100) + '%';
+  document.getElementById('bar-aif').style.width = Math.round(aifMid / maxBar * 100) + '%';
+  document.getElementById('bar-mf-label').textContent = fmt(mfAnn);
+  document.getElementById('bar-pms-label').textContent = fmt(pmsMid);
+  document.getElementById('bar-aif-label').textContent = fmt(aifMid);
+}
+
+updateAll(100);
+</script>
+</body>
+</html>
